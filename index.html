@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单日历</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .calendar-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .calendar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .calendar-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .calendar-header .current-date {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .month-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .month-nav button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .month-nav button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .month-nav button:active {
+            transform: translateY(0);
+        }
+
+        .current-month {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .calendar-grid {
+            padding: 10px;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+            font-size: 12px;
+            padding: 5px;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .day:hover:not(.empty) {
+            background: #f0f0f0;
+        }
+
+        .day.empty {
+            cursor: default;
+        }
+
+        .day.today {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .day.other-month {
+            color: #ccc;
+        }
+
+        @media (max-width: 480px) {
+            .calendar-container {
+                border-radius: 15px;
+            }
+
+            .calendar-header h1 {
+                font-size: 20px;
+            }
+
+            .calendar-header .current-date {
+                font-size: 12px;
+            }
+
+            .month-nav {
+                padding: 12px 15px;
+            }
+
+            .month-nav button {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+
+            .current-month {
+                font-size: 16px;
+            }
+
+            .day {
+                font-size: 12px;
+                border-radius: 8px;
+            }
+
+            .weekday {
+                font-size: 11px;
+                padding: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <h1>📅 日历</h1>
+            <div class="current-date" id="current-date"></div>
+        </div>
+        
+        <div class="month-nav">
+            <button id="prev-month">◀ 上月</button>
+            <div class="current-month" id="current-month"></div>
+            <button id="next-month">下月 ▶</button>
+        </div>
+        
+        <div class="calendar-grid">
+            <div class="weekdays">
+                <div class="weekday">日</div>
+                <div class="weekday">一</div>
+                <div class="weekday">二</div>
+                <div class="weekday">三</div>
+                <div class="weekday">四</div>
+                <div class="weekday">五</div>
+                <div class="weekday">六</div>
+            </div>
+            <div class="days" id="days"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentDate = new Date();
+        let displayDate = new Date();
+
+        const months = [
+            '一月', '二月', '三月', '四月', '五月', '六月',
+            '七月', '八月', '九月', '十月', '十一月', '十二月'
+        ];
+
+        function updateCurrentDateDisplay() {
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            document.getElementById('current-date').textContent = 
+                currentDate.toLocaleDateString('zh-CN', options);
+        }
+
+        function updateMonthDisplay() {
+            document.getElementById('current-month').textContent = 
+                `${displayDate.getFullYear()}年 ${months[displayDate.getMonth()]}`;
+        }
+
+        function generateCalendar() {
+            const year = displayDate.getFullYear();
+            const month = displayDate.getMonth();
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startingDay = firstDay.getDay();
+            const totalDays = lastDay.getDate();
+            
+            const daysContainer = document.getElementById('days');
+            daysContainer.innerHTML = '';
+            
+            // Empty cells for days before the first day of the month
+            for (let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'day empty';
+                daysContainer.appendChild(emptyCell);
+            }
+            
+            // Days of the month
+            for (let day = 1; day <= totalDays; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'day';
+                dayCell.textContent = day;
+                
+                // Check if this is today
+                if (day === currentDate.getDate() && 
+                    month === currentDate.getMonth() && 
+                    year === currentDate.getFullYear()) {
+                    dayCell.classList.add('today');
+                }
+                
+                daysContainer.appendChild(dayCell);
+            }
+        }
+
+        function previousMonth() {
+            displayDate.setMonth(displayDate.getMonth() - 1);
+            updateMonthDisplay();
+            generateCalendar();
+        }
+
+        function nextMonth() {
+            displayDate.setMonth(displayDate.getMonth() + 1);
+            updateMonthDisplay();
+            generateCalendar();
+        }
+
+        // Event listeners
+        document.getElementById('prev-month').addEventListener('click', previousMonth);
+        document.getElementById('next-month').addEventListener('click', nextMonth);
+
+        // Initialize
+        updateCurrentDateDisplay();
+        updateMonthDisplay();
+        generateCalendar();
+    </script>
+</body>
+</html>
